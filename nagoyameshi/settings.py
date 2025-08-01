@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 import pymysql
 from decouple import config
+import os
 
 pymysql.install_as_MySQLdb()
 
@@ -25,7 +26,8 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Heroku対応: ALLOWED_HOSTSを更新
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.herokuapp.com']
 
 # Application definition
 INSTALLED_APPS = [
@@ -47,8 +49,10 @@ INSTALLED_APPS = [
     'restaurants',
 ]
 
+# Heroku対応: WhiteNoiseミドルウェアを追加
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Heroku静的ファイル対応
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -79,19 +83,28 @@ TEMPLATES = [
 WSGI_APPLICATION = 'nagoyameshi.wsgi.application'
 
 # Database
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT'),
-        'OPTIONS': {
-            'charset': 'utf8mb4',
-        },
+# Heroku対応: JawsDB環境変数も考慮
+if 'JAWSDB_MARIA_URL' in os.environ:
+    # Heroku環境での設定
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.parse(os.environ.get('JAWSDB_MARIA_URL'))
     }
-}
+else:
+    # ローカル環境での設定
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': config('DB_NAME'),
+            'USER': config('DB_USER'),
+            'PASSWORD': config('DB_PASSWORD'),
+            'HOST': config('DB_HOST'),
+            'PORT': config('DB_PORT'),
+            'OPTIONS': {
+                'charset': 'utf8mb4',
+            },
+        }
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -116,10 +129,12 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
+# Heroku対応: STATIC_ROOTを追加
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # Heroku用
 
 # Media files
 MEDIA_URL = '/media/'
