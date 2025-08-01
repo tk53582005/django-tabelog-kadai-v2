@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NAGOYAMESHI{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        /* 検索ボタンを1段表示にするスタイル */
+        .search-form {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .search-form .form-control {
+            flex: 1;
+        }
+        .search-form .btn {
+            white-space: nowrap;
+            min-width: 60px;
+        }
+        
+        /* レスポンシブ対応 */
+        @media (max-width: 576px) {
+            .search-form {
+                flex-direction: column;
+            }
+            .search-form .form-control {
+                margin-bottom: 0.5rem;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- ナビゲーション -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'restaurants:index' %}">
+                NAGOYAMESHI
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if user.is_authenticated %}
+                        <!-- ログイン済み -->
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{% url 'accounts:mypage' %}">
+                                マイページ
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{% url 'account_logout' %}">
+                                ログアウト
+                            </a>
+                        </li>
+                    {% else %}
+                        <!-- 未ログイン -->
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{% url 'account_login' %}">
+                                ログイン
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{% url 'account_signup' %}">
+                                会員登録
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- メインコンテンツ -->
+    <main>
+        <!-- メッセージ表示 -->
+        {% if messages %}
+        <div class="container mt-3">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- フッター -->
+    <footer class="bg-dark text-white mt-5">
+        <div class="container py-4">
+            <div class="text-center">
+                <h5><a href="{% url 'restaurants:index' %}" class="text-white text-decoration-none">NAGOYAMESHI</a></h5>
+                <p>名古屋のグルメ情報サイト</p>
+                <small>&copy; 2025 NAGOYAMESHI</small>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

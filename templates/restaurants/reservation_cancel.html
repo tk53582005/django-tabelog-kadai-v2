@@ -1,0 +1,48 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}予約キャンセル - NAGOYAMESHI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'restaurants:index' %}">トップ</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'restaurants:reservation_list' %}">予約一覧</a></li>
+            <li class="breadcrumb-item active">予約キャンセル</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>予約キャンセル</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h5>以下の予約をキャンセルしますか？</h5>
+                    </div>
+                    
+                    <!-- 予約詳細 -->
+                    <div class="mb-4">
+                        <h6>予約詳細</h6>
+                        <p><strong>店舗名:</strong> {{ reservation.restaurant.name }}</p>
+                        <p><strong>予約日:</strong> {{ reservation.reservation_date }}</p>
+                        <p><strong>予約時間:</strong> {{ reservation.reservation_time }}</p>
+                        <p><strong>人数:</strong> {{ reservation.number_of_people }}名</p>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'restaurants:reservation_list' %}" class="btn btn-secondary">戻る</a>
+                            <button type="submit" class="btn btn-danger">キャンセルする</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

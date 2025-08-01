@@ -1,0 +1,79 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}予約 - {{ restaurant.name }} - NAGOYAMESHI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'restaurants:index' %}">トップ</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'restaurants:detail' restaurant.pk %}">{{ restaurant.name }}</a></li>
+            <li class="breadcrumb-item active">予約</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>予約</h3>
+                </div>
+                <div class="card-body">
+                    <!-- 店舗情報 -->
+                    <div class="mb-4">
+                        <h5>{{ restaurant.name }}</h5>
+                        <p class="text-muted">{{ restaurant.address }}</p>
+                    </div>
+
+                    <!-- エラーメッセージ -->
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- 予約日 -->
+                        <div class="mb-3">
+                            <label for="id_reservation_date" class="form-label">予約日</label>
+                            <input type="date" class="form-control" id="id_reservation_date" name="reservation_date" required>
+                        </div>
+
+                        <!-- 予約時間 -->
+                        <div class="mb-3">
+                            <label for="id_reservation_time" class="form-label">予約時間</label>
+                            <input type="time" class="form-control" id="id_reservation_time" name="reservation_time" required>
+                        </div>
+
+                        <!-- 人数 -->
+                        <div class="mb-3">
+                            <label for="id_number_of_people" class="form-label">人数</label>
+                            <select class="form-control" id="id_number_of_people" name="number_of_people" required>
+                                <option value="">選択してください</option>
+                                <option value="1">1名</option>
+                                <option value="2">2名</option>
+                                <option value="3">3名</option>
+                                <option value="4">4名</option>
+                                <option value="5">5名</option>
+                                <option value="6">6名</option>
+                            </select>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'restaurants:detail' restaurant.pk %}" class="btn btn-secondary">戻る</a>
+                            <button type="submit" class="btn btn-success">予約する</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

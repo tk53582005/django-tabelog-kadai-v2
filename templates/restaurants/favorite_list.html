@@ -1,0 +1,54 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}お気に入り一覧 - NAGOYAMESHI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- パンくず -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'restaurants:index' %}">トップ</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'accounts:mypage' %}">マイページ</a></li>
+            <li class="breadcrumb-item active">お気に入り一覧</li>
+        </ol>
+    </nav>
+
+    <h2>お気に入り一覧 ({{ favorites|length }}件)</h2>
+
+    {% if favorites %}
+    <div class="row">
+        {% for favorite in favorites %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                {% if favorite.restaurant.image %}
+                <img src="{{ favorite.restaurant.image.url }}" class="card-img-top" alt="{{ favorite.restaurant.name }}" style="height: 200px; object-fit: cover;">
+                {% endif %}
+                
+                <div class="card-body">
+                    <h5 class="card-title">{{ favorite.restaurant.name }}</h5>
+                    <p class="card-text">
+                        <span class="badge bg-primary">{{ favorite.restaurant.category.name }}</span>
+                    </p>
+                    <p class="card-text">{{ favorite.restaurant.description|truncatechars:50 }}</p>
+                    <p class="card-text">
+                        <small class="text-muted">{{ favorite.restaurant.address }}</small>
+                    </p>
+                    <p class="card-text">
+                        <small class="text-muted">追加日: {{ favorite.created_at|date:"Y/m/d" }}</small>
+                    </p>
+                    <a href="{% url 'restaurants:detail' favorite.restaurant.pk %}" class="btn btn-primary btn-sm">詳細を見る</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center mt-5">
+        <h4>お気に入りがありません</h4>
+        <p>気になるお店をお気に入りに追加してみましょう。</p>
+        <a href="{% url 'restaurants:index' %}" class="btn btn-primary">お店を探す</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

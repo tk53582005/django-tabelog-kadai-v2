@@ -1,0 +1,44 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}ログイン - NAGOYAMESHI{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>ログイン</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- メールアドレス -->
+                        <div class="mb-3">
+                            <label for="id_login" class="form-label">メールアドレス</label>
+                            <input type="email" class="form-control" id="id_login" name="login" required>
+                        </div>
+                        
+                        <!-- パスワード -->
+                        <div class="mb-3">
+                            <label for="id_password" class="form-label">パスワード</label>
+                            <input type="password" class="form-control" id="id_password" name="password" required>
+                        </div>
+                        
+                        <!-- ログインボタン -->
+                        <button type="submit" class="btn btn-primary w-100">ログイン</button>
+                    </form>
+                    
+                    <!-- リンク -->
+                    <div class="text-center mt-3">
+                        <p><a href="{% url 'account_reset_password' %}">パスワードを忘れた方はこちら</a></p>
+                        <p><a href="{% url 'account_signup' %}">アカウント作成はこちら</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

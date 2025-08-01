@@ -1,0 +1,75 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}レビュー編集 - {{ object.restaurant.name }} - NAGOYAMESHI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'restaurants:index' %}">トップ</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'restaurants:detail' object.restaurant.pk %}">{{ object.restaurant.name }}</a></li>
+            <li class="breadcrumb-item active">レビュー編集</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>レビュー編集</h3>
+                </div>
+                <div class="card-body">
+                    <!-- 店舗情報 -->
+                    <div class="mb-4">
+                        <h5>{{ object.restaurant.name }}</h5>
+                        <p class="text-muted">{{ object.restaurant.address }}</p>
+                    </div>
+
+                    <!-- エラーメッセージ -->
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- 評価 -->
+                        <div class="mb-3">
+                            <label for="id_rating" class="form-label">評価</label>
+                            <select class="form-control" id="id_rating" name="rating" required>
+                                <option value="">選択してください</option>
+                                <option value="1" {% if form.rating.value == 1 %}selected{% endif %}>1つ星</option>
+                                <option value="2" {% if form.rating.value == 2 %}selected{% endif %}>2つ星</option>
+                                <option value="3" {% if form.rating.value == 3 %}selected{% endif %}>3つ星</option>
+                                <option value="4" {% if form.rating.value == 4 %}selected{% endif %}>4つ星</option>
+                                <option value="5" {% if form.rating.value == 5 %}selected{% endif %}>5つ星</option>
+                            </select>
+                        </div>
+
+                        <!-- コメント -->
+                        <div class="mb-3">
+                            <label for="id_comment" class="form-label">レビュー内容</label>
+                            <textarea class="form-control" id="id_comment" name="comment" rows="4" required>{{ form.comment.value|default:"" }}</textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'accounts:mypage' %}" class="btn btn-secondary">戻る</a>
+                            <div>
+                                <a href="{% url 'restaurants:review_delete' object.pk %}" class="btn btn-danger me-2">削除</a>
+                                <button type="submit" class="btn btn-primary">更新する</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

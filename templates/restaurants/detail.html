@@ -1,0 +1,154 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}{{ restaurant.name }} - NAGOYAMESHI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- パンくず -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'restaurants:index' %}">トップ</a></li>
+            <li class="breadcrumb-item active">{{ restaurant.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- 店舗メイン情報 -->
+            <div class="card mb-4">
+                {% if restaurant.image %}
+                <img src="{{ restaurant.image.url }}" class="card-img-top" alt="{{ restaurant.name }}" style="height: 300px; object-fit: cover;">
+                {% endif %}
+                
+                <div class="card-body">
+                    <h1>{{ restaurant.name }}</h1>
+                    <p><span class="badge bg-primary">{{ restaurant.category.name }}</span></p>
+                    
+                    <!-- 評価 -->
+                    <div class="mb-3">
+                        {% if restaurant.get_average_rating > 0 %}
+                        <span class="text-warning">
+                            {% for i in "12345" %}
+                                {% if restaurant.get_average_rating >= i|add:0 %}
+                                    <i class="fas fa-star"></i>
+                                {% else %}
+                                    <i class="far fa-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </span>
+                        <span>{{ restaurant.get_average_rating|floatformat:1 }}</span>
+                        {% else %}
+                        <span class="text-muted">評価なし</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- 説明 -->
+                    {% if restaurant.description %}
+                    <p>{{ restaurant.description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- 店舗情報 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>店舗情報</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>住所:</strong> {{ restaurant.address }}</p>
+                    <p><strong>電話:</strong> {{ restaurant.phone_number|default:"--" }}</p>
+                    <p><strong>営業時間:</strong> 
+                        {% if restaurant.opening_time and restaurant.closing_time %}
+                        {{ restaurant.opening_time|time:"H:i" }} - {{ restaurant.closing_time|time:"H:i" }}
+                        {% else %}
+                        --
+                        {% endif %}
+                    </p>
+                    <p><strong>定休日:</strong> {{ restaurant.regular_holiday|default:"--" }}</p>
+                    {% if restaurant.website_url %}
+                    <p><strong>ウェブサイト:</strong> <a href="{{ restaurant.website_url }}" target="_blank">公式サイト</a></p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 予約ボタン -->
+            {% if user.is_authenticated and user.is_premium %}
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <a href="{% url 'restaurants:reservation_create' restaurant.pk %}" class="btn btn-success w-100">予約する</a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- お気に入りボタン（プレミアム会員限定） -->
+            {% if user.is_authenticated and user.is_premium %}
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <form method="post" action="{% url 'restaurants:toggle_favorite' restaurant.id %}">
+                        {% csrf_token %}
+                        {% if is_favorite %}
+                            <button type="submit" class="btn btn-danger w-100">
+                                <i class="fas fa-heart"></i> お気に入りから削除
+                            </button>
+                        {% else %}
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="far fa-heart"></i> お気に入りに追加
+                            </button>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+            {% elif user.is_authenticated %}
+            <!-- 無料会員への案内 -->
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <p class="text-muted mb-2">お気に入り登録はプレミアム会員限定です</p>
+                    <a href="{% url 'accounts:subscription_plan' %}" class="btn btn-warning btn-sm">
+                        プレミアム会員になる
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- レビュー一覧 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>レビュー</h5>
+                    {% if user.is_authenticated and user.is_premium %}
+                    <a href="{% url 'restaurants:review_create' restaurant.pk %}" class="btn btn-primary btn-sm">レビューを書く</a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% for review in reviews %}
+                    <div class="mb-3 {% if not forloop.last %}border-bottom pb-3{% endif %}">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ review.user.email }}</strong>
+                            <small class="text-muted">{{ review.created_at|date:"Y/m/d" }}</small>
+                        </div>
+                        <div class="mb-2">
+                            {% for i in "12345" %}
+                                {% if review.rating >= i|add:0 %}
+                                <i class="fas fa-star text-warning"></i>
+                                {% else %}
+                                <i class="far fa-star text-warning"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <p>{{ review.comment }}</p>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">まだレビューがありません。</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

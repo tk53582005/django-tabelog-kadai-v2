@@ -1,0 +1,255 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}マイページ - NAGOYAMESHI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- パンくずナビ -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'restaurants:index' %}">トップ</a></li>
+            <li class="breadcrumb-item active">マイページ</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- サイドバー -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h6>メニュー</h6>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'accounts:mypage' %}" class="list-group-item list-group-item-action active">
+                        マイページ
+                    </a>
+                    <a href="{% url 'accounts:profile_edit' %}" class="list-group-item list-group-item-action">
+                        プロフィール編集
+                    </a>
+                    <a href="{% url 'accounts:password_change' %}" class="list-group-item list-group-item-action">
+                        パスワード変更
+                    </a>
+                    {% if user.is_premium %}
+                    <a href="{% url 'accounts:card_manage' %}" class="list-group-item list-group-item-action">
+                        クレジットカード管理
+                    </a>
+                    <a href="{% url 'accounts:subscription_manage' %}" class="list-group-item list-group-item-action">
+                        サブスクリプション管理
+                    </a>
+                    {% else %}
+                    <a href="{% url 'accounts:subscription_plan' %}" class="list-group-item list-group-item-action">
+                        プレミアム会員になる
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- メインコンテンツ -->
+        <div class="col-md-9">
+            <!-- 会員情報 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>会員情報</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>お名前</strong></td>
+                                    <td>
+                                        {% if user.last_name or user.first_name %}
+                                            {{ user.last_name }} {{ user.first_name }}
+                                        {% else %}
+                                            未設定
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>メールアドレス</strong></td>
+                                    <td>{{ user.email }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>会員種別</strong></td>
+                                    <td>
+                                        {% if user.is_premium %}
+                                            <span class="badge bg-warning">プレミアム会員</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">無料会員</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>郵便番号</strong></td>
+                                    <td>{{ user.postal_code|default:"未設定" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>住所</strong></td>
+                                    <td>{{ user.address|default:"未設定" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>電話番号</strong></td>
+                                    <td>{{ user.phone_number|default:"未設定" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <a href="{% url 'accounts:profile_edit' %}" class="btn btn-sm btn-outline-primary">
+                            プロフィール編集
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- プレミアム会員の場合：追加機能 -->
+            {% if user.is_premium %}
+                <!-- お気に入り店舗 -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between">
+                        <h6>お気に入り店舗</h6>
+                        <a href="{% url 'restaurants:favorite_list' %}" class="btn btn-sm btn-outline-primary">すべて見る</a>
+                    </div>
+                    <div class="card-body">
+                        {% if favorite_restaurants %}
+                            {% for favorite in favorite_restaurants %}
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="me-3">
+                                    {% if favorite.restaurant.image %}
+                                    <img src="{{ favorite.restaurant.image.url }}" class="rounded" width="50" height="50" style="object-fit: cover;">
+                                    {% else %}
+                                    <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                        画像なし
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ favorite.restaurant.name }}</h6>
+                                    <small class="text-muted">{{ favorite.restaurant.category.name }}</small>
+                                </div>
+                                <div>
+                                    <a href="{% url 'restaurants:detail' favorite.restaurant.pk %}" class="btn btn-sm btn-outline-primary">詳細</a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center">まだお気に入りがありません</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 予約履歴 -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between">
+                        <h6>予約履歴</h6>
+                        <a href="{% url 'restaurants:reservation_list' %}" class="btn btn-sm btn-outline-primary">すべて見る</a>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_reservations %}
+                            {% for reservation in recent_reservations %}
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="me-3">
+                                    {% if reservation.restaurant.image %}
+                                    <img src="{{ reservation.restaurant.image.url }}" class="rounded" width="50" height="50" style="object-fit: cover;">
+                                    {% else %}
+                                    <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                        画像なし
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">
+                                        <a href="{% url 'restaurants:detail' reservation.restaurant.pk %}">
+                                            {{ reservation.restaurant.name }}
+                                        </a>
+                                    </h6>
+                                    <div class="mb-1">
+                                        <span class="badge {% if reservation.status == 'confirmed' %}bg-success{% elif reservation.status == 'cancelled' %}bg-danger{% else %}bg-warning{% endif %}">
+                                            {% if reservation.status == 'confirmed' %}確定
+                                            {% elif reservation.status == 'cancelled' %}キャンセル済み
+                                            {% else %}{{ reservation.status }}
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <small class="text-muted">
+                                        {{ reservation.reservation_date }} {{ reservation.reservation_time }} | {{ reservation.number_of_people }}名
+                                    </small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center">まだ予約がありません</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- レビュー管理セクション -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6><i class="fas fa-star text-warning"></i> あなたのレビュー</h6>
+                        <a href="{% url 'restaurants:review_list' %}" class="btn btn-sm btn-outline-primary">すべて見る</a>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_reviews %}
+                            {% for review in recent_reviews %}
+                            <div class="border-bottom pb-2 mb-2">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">
+                                            <a href="{% url 'restaurants:detail' review.restaurant.pk %}" class="text-decoration-none">
+                                                {{ review.restaurant.name }}
+                                            </a>
+                                        </h6>
+                                        <div class="text-warning mb-1">
+                                            {% for i in "12345" %}
+                                                {% if forloop.counter <= review.rating %}
+                                                    <i class="fas fa-star"></i>
+                                                {% else %}
+                                                    <i class="far fa-star"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        <p class="mb-1">{{ review.comment|truncatechars:50 }}</p>
+                                        <small class="text-muted">{{ review.created_at|date:"Y年m月d日" }}</small>
+                                    </div>
+                                    <div>
+                                        <a href="{% url 'restaurants:review_edit' review.pk %}" class="btn btn-outline-primary btn-sm">編集</a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">まだレビューがありません。</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <!-- 無料会員向け案内 -->
+                <div class="card border-warning">
+                    <div class="card-header bg-warning">
+                        <h6>プレミアム会員になりませんか？</h6>
+                    </div>
+                    <div class="card-body">
+                        <p>プレミアム会員になると以下の機能が利用できます：</p>
+                        <ul>
+                            <li>店舗の予約機能</li>
+                            <li>レビューの投稿</li>
+                            <li>お気に入り店舗の保存</li>
+                        </ul>
+                        <div class="text-center">
+                            <a href="{% url 'accounts:subscription_plan' %}" class="btn btn-warning">
+                                プレミアム会員になる（月額300円）
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

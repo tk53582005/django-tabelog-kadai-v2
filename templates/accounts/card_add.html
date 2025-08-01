@@ -1,0 +1,157 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}クレジットカード追加 - NAGOYAMESHI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- パンくずナビ -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'restaurants:index' %}">トップ</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'accounts:mypage' %}">マイページ</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'accounts:card_manage' %}">クレジットカード管理</a></li>
+            <li class="breadcrumb-item active">クレジットカード追加</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>新しいクレジットカードを追加</h4>
+                </div>
+                <div class="card-body">
+                    <form id="card-form" method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">クレジットカード名義人</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="card-holder-name" 
+                                   placeholder="YAMADA TARO"
+                                   required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">クレジットカード番号</label>
+                            <div id="card-number-element" class="form-control">
+                                <!-- Stripe Elements -->
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">有効期限</label>
+                                <div id="card-expiry-element" class="form-control">
+                                    <!-- Stripe Elements -->
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">セキュリティコード</label>
+                                <div id="card-cvc-element" class="form-control">
+                                    <!-- Stripe Elements -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="set-default" checked>
+                                <label class="form-check-label" for="set-default">
+                                    メインの支払い方法に設定する
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- エラー表示 -->
+                        <div id="card-errors" class="alert alert-danger d-none"></div>
+
+                        <!-- ボタン -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'accounts:card_manage' %}" class="btn btn-secondary">
+                                戻る
+                            </a>
+                            <button type="submit" id="submit-button" class="btn btn-primary">
+                                クレジットカードを追加
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+// Stripe設定
+const stripe = Stripe('{{ stripe_public_key }}');
+const elements = stripe.elements();
+
+// クレジットカード要素作成
+const cardNumber = elements.create('cardNumber');
+const cardExpiry = elements.create('cardExpiry');
+const cardCvc = elements.create('cardCvc');
+
+// 要素をマウント
+cardNumber.mount('#card-number-element');
+cardExpiry.mount('#card-expiry-element');
+cardCvc.mount('#card-cvc-element');
+
+// エラー表示
+function showError(message) {
+    const errorElement = document.getElementById('card-errors');
+    errorElement.textContent = message;
+    errorElement.classList.remove('d-none');
+}
+
+// フォーム送信
+document.getElementById('card-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    
+    const submitButton = document.getElementById('submit-button');
+    submitButton.disabled = true;
+    submitButton.textContent = '処理中...';
+    
+    try {
+        // PaymentMethod作成
+        const {paymentMethod, error} = await stripe.createPaymentMethod({
+            type: 'card',
+            card: cardNumber,
+            billing_details: {
+                name: document.getElementById('card-holder-name').value,
+            },
+        });
+
+        if (error) {
+            showError(error.message);
+            submitButton.disabled = false;
+            submitButton.textContent = 'クレジットカードを追加';
+        } else {
+            // サーバーに送信
+            const formData = new FormData(document.getElementById('card-form'));
+            formData.append('payment_method_id', paymentMethod.id);
+            formData.append('set_default', document.getElementById('set-default').checked);
+            
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+            });
+            
+            if (response.ok) {
+                window.location.href = '{% url "accounts:card_manage" %}';
+            } else {
+                showError('クレジットカードの追加に失敗しました');
+                submitButton.disabled = false;
+                submitButton.textContent = 'クレジットカードを追加';
+            }
+        }
+    } catch (err) {
+        showError('エラーが発生しました');
+        submitButton.disabled = false;
+        submitButton.textContent = 'クレジットカードを追加';
+    }
+});
+</script>
+{% endblock %}

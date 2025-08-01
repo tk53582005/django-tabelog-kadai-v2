@@ -1,0 +1,178 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}クレジットカード管理 - NAGOYAMESHI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- パンくずナビ -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'restaurants:index' %}">トップ</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'accounts:mypage' %}">マイページ</a></li>
+            <li class="breadcrumb-item active">クレジットカード管理</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- サイドバー -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h6>メニュー</h6>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'accounts:mypage' %}" class="list-group-item list-group-item-action">
+                        マイページ
+                    </a>
+                    <a href="{% url 'accounts:profile_edit' %}" class="list-group-item list-group-item-action">
+                        プロフィール編集
+                    </a>
+                    <a href="{% url 'accounts:password_change' %}" class="list-group-item list-group-item-action">
+                        パスワード変更
+                    </a>
+                    {% if user.is_premium %}
+                    <a href="{% url 'accounts:card_manage' %}" class="list-group-item list-group-item-action active">
+                        クレジットカード管理
+                    </a>
+                    <a href="{% url 'accounts:subscription_manage' %}" class="list-group-item list-group-item-action">
+                        サブスクリプション管理
+                    </a>
+                    {% else %}
+                    <a href="{% url 'accounts:subscription_plan' %}" class="list-group-item list-group-item-action">
+                        プレミアム会員になる
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- メインコンテンツ -->
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>クレジットカード管理</h5>
+                    <a href="{% url 'accounts:card_add' %}" class="btn btn-sm btn-outline-primary">
+                        新しいクレジットカードを追加
+                    </a>
+                </div>
+                <div class="card-body">
+                    <!-- 登録済みカード一覧 -->
+                    {% if payment_methods %}
+                    <div class="row">
+                        {% for payment_method in payment_methods %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card {% if payment_method.id == default_payment_method %}border-success{% endif %}">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h6>{{ payment_method.card.brand|title }}</h6>
+                                            <p class="mb-0">****{{ payment_method.card.last4 }}</p>
+                                            <small class="text-muted">
+                                                有効期限: {{ payment_method.card.exp_month }}/{{ payment_method.card.exp_year }}
+                                            </small>
+                                        </div>
+                                        {% if payment_method.id == default_payment_method %}
+                                        <span class="badge bg-success">メイン</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="d-flex gap-2">
+                                        {% if payment_method.id != default_payment_method %}
+                                        <button class="btn btn-sm btn-outline-success" onclick="setDefaultCard('{{ payment_method.id }}')">
+                                            メインに設定
+                                        </button>
+                                        {% endif %}
+                                        <button class="btn btn-sm btn-outline-danger" onclick="removeCard('{{ payment_method.id }}')">
+                                            削除
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <!-- カードが登録されていない場合 -->
+                    <div class="text-center py-5">
+                        <h4 class="text-muted mb-3">クレジットカードが登録されていません</h4>
+                        <p class="text-muted mb-4">支払い方法を登録してください。</p>
+                        <a href="{% url 'accounts:card_add' %}" class="btn btn-primary">
+                            クレジットカードを追加
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <!-- カード変更オプション -->
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h6>クレジットカードを変更</h6>
+                                    <p class="text-muted small">既存のクレジットカードを新しいクレジットカードに変更</p>
+                                    <a href="{% url 'accounts:card_change' %}" class="btn btn-outline-info">
+                                        クレジットカードを変更
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// クレジットカードをメインに設定
+function setDefaultCard(paymentMethodId) {
+    if (confirm('このクレジットカードをメインの支払い方法に設定しますか？')) {
+        fetch('{% url "accounts:set_default_card" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: 'payment_method_id=' + paymentMethodId
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('エラー: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('通信エラーが発生しました');
+        });
+    }
+}
+
+// クレジットカードを削除
+function removeCard(paymentMethodId) {
+    if (confirm('このクレジットカードを削除しますか？')) {
+        fetch('{% url "accounts:remove_payment_method" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: 'payment_method_id=' + paymentMethodId
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('エラー: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('通信エラーが発生しました');
+        });
+    }
+}
+</script>
+{% endblock %}

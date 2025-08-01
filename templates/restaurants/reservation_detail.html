@@ -1,0 +1,62 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}予約詳細 - NAGOYAMESHI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'restaurants:index' %}">トップ</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'restaurants:reservation_list' %}">予約一覧</a></li>
+            <li class="breadcrumb-item active">予約詳細</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>予約詳細</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-success">
+                        予約が完了しました！
+                    </div>
+
+                    <!-- 店舗情報 -->
+                    <h5>店舗情報</h5>
+                    <p><strong>店舗名:</strong> {{ reservation.restaurant.name }}</p>
+                    <p><strong>住所:</strong> {{ reservation.restaurant.address }}</p>
+                    {% if reservation.restaurant.phone_number %}
+                    <p><strong>電話番号:</strong> {{ reservation.restaurant.phone_number }}</p>
+                    {% endif %}
+
+                    <hr>
+
+                    <!-- 予約情報 -->
+                    <h5>予約情報</h5>
+                    <p><strong>予約日:</strong> {{ reservation.reservation_date }}</p>
+                    <p><strong>予約時間:</strong> {{ reservation.reservation_time }}</p>
+                    <p><strong>人数:</strong> {{ reservation.number_of_people }}名</p>
+                    <p><strong>ステータス:</strong> 
+                        {% if reservation.status == 'confirmed' %}
+                        <span class="badge bg-success">予約確定</span>
+                        {% elif reservation.status == 'cancelled' %}
+                        <span class="badge bg-danger">キャンセル済み</span>
+                        {% endif %}
+                    </p>
+
+                    <div class="mt-4">
+                        <a href="{% url 'restaurants:reservation_list' %}" class="btn btn-secondary">予約一覧に戻る</a>
+                        <a href="{% url 'restaurants:detail' reservation.restaurant.pk %}" class="btn btn-primary ms-2">店舗詳細</a>
+                        {% if reservation.status == 'confirmed' %}
+                        <a href="{% url 'restaurants:reservation_cancel' reservation.pk %}" class="btn btn-warning ms-2">キャンセル</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

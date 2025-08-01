@@ -1,0 +1,171 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}プロフィール編集 - NAGOYAMESHI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- パンくずナビ -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'restaurants:index' %}">トップ</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'accounts:mypage' %}">マイページ</a></li>
+            <li class="breadcrumb-item active">プロフィール編集</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- サイドバー -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h6>メニュー</h6>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'accounts:mypage' %}" class="list-group-item list-group-item-action">
+                        マイページ
+                    </a>
+                    <a href="{% url 'accounts:profile_edit' %}" class="list-group-item list-group-item-action active">
+                        プロフィール編集
+                    </a>
+                    <a href="{% url 'accounts:password_change' %}" class="list-group-item list-group-item-action">
+                        パスワード変更
+                    </a>
+                    {% if user.is_premium %}
+                    <a href="{% url 'accounts:card_manage' %}" class="list-group-item list-group-item-action">
+                        クレジットカード管理
+                    </a>
+                    <a href="{% url 'accounts:subscription_manage' %}" class="list-group-item list-group-item-action">
+                        サブスクリプション管理
+                    </a>
+                    {% else %}
+                    <a href="{% url 'accounts:subscription_plan' %}" class="list-group-item list-group-item-action">
+                        プレミアム会員になる
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- メインコンテンツ -->
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header">
+                    <h5>プロフィール編集</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- エラーメッセージ -->
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <!-- 姓 -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                                    {{ form.last_name.label }}
+                                </label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                <div class="text-danger small">
+                                    {{ form.last_name.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <!-- 名 -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                                    {{ form.first_name.label }}
+                                </label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                <div class="text-danger small">
+                                    {{ form.first_name.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- メールアドレス -->
+                        <div class="mb-3">
+                            <label class="form-label">メールアドレス</label>
+                            <input type="email" class="form-control" value="{{ user.email }}" readonly>
+                            <small class="text-muted">メールアドレスは変更できません</small>
+                        </div>
+
+                        <!-- 郵便番号 -->
+                        <div class="mb-3">
+                            <label for="{{ form.postal_code.id_for_label }}" class="form-label">
+                                {{ form.postal_code.label }}
+                            </label>
+                            {{ form.postal_code }}
+                            {% if form.postal_code.errors %}
+                            <div class="text-danger small">
+                                {{ form.postal_code.errors }}
+                            </div>
+                            {% endif %}
+                            <small class="text-muted">例: 460-0008</small>
+                        </div>
+
+                        <!-- 住所 -->
+                        <div class="mb-3">
+                            <label for="{{ form.address.id_for_label }}" class="form-label">
+                                {{ form.address.label }}
+                            </label>
+                            {{ form.address }}
+                            {% if form.address.errors %}
+                            <div class="text-danger small">
+                                {{ form.address.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- 電話番号 -->
+                        <div class="mb-3">
+                            <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                                {{ form.phone_number.label }}
+                            </label>
+                            {{ form.phone_number }}
+                            {% if form.phone_number.errors %}
+                            <div class="text-danger small">
+                                {{ form.phone_number.errors }}
+                            </div>
+                            {% endif %}
+                            <small class="text-muted">例: 090-1234-5678</small>
+                        </div>
+
+                        <!-- 会員種別 -->
+                        <div class="mb-4">
+                            <label class="form-label">会員種別</label>
+                            <div>
+                                {% if user.is_premium %}
+                                    <span class="badge bg-warning">プレミアム会員</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">無料会員</span>
+                                    <a href="{% url 'accounts:subscription_plan' %}" class="btn btn-sm btn-warning ms-2">
+                                        プレミアム会員になる
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- ボタン -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'accounts:mypage' %}" class="btn btn-secondary">
+                                戻る
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                保存する
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}予約一覧 - NAGOYAMESHI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'restaurants:index' %}">トップ</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'accounts:mypage' %}">マイページ</a></li>
+            <li class="breadcrumb-item active">予約一覧</li>
+        </ol>
+    </nav>
+
+    <h2>予約一覧 ({{ reservations|length }}件)</h2>
+
+    {% if reservations %}
+    <div class="row">
+        {% for reservation in reservations %}
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6>{{ reservation.reservation_date }} {{ reservation.reservation_time }}</h6>
+                    {% if reservation.status == 'confirmed' %}
+                    <span class="badge bg-success">予約確定</span>
+                    {% elif reservation.status == 'cancelled' %}
+                    <span class="badge bg-danger">キャンセル済み</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <h5>{{ reservation.restaurant.name }}</h5>
+                    <p><span class="badge bg-primary">{{ reservation.restaurant.category.name }}</span></p>
+                    <p><strong>人数:</strong> {{ reservation.number_of_people }}名</p>
+                    <p><strong>住所:</strong> {{ reservation.restaurant.address }}</p>
+                    
+                    <div class="mt-3">
+                        <a href="{% url 'restaurants:reservation_detail' reservation.pk %}" class="btn btn-primary btn-sm">詳細</a>
+                        <a href="{% url 'restaurants:detail' reservation.restaurant.pk %}" class="btn btn-outline-primary btn-sm">店舗詳細</a>
+                        {% if reservation.status == 'confirmed' %}
+                        <a href="{% url 'restaurants:reservation_cancel' reservation.pk %}" class="btn btn-warning btn-sm">キャンセル</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center mt-5">
+        <h4>まだ予約がありません</h4>
+        <p>お気に入りの店舗で予約をしてみましょう。</p>
+        <a href="{% url 'restaurants:index' %}" class="btn btn-success">お店を探す</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
