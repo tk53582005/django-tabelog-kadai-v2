@@ -35,7 +35,7 @@
                     <p><strong>住所:</strong> {{ reservation.restaurant.address }}</p>
                     
                     <div class="mt-3">
-                        <a href="{% url 'restaurants:reservation_detail' reservation.pk %}" class="btn btn-primary btn-sm">詳細</a>
+                        <a href="{% url 'restaurants:reservation_detail' reservation.pk %}" class="btn btn-primary btn-sm">予約詳細</a>
                         <a href="{% url 'restaurants:detail' reservation.restaurant.pk %}" class="btn btn-outline-primary btn-sm">店舗詳細</a>
                         {% if reservation.status == 'confirmed' %}
                         <a href="{% url 'restaurants:reservation_cancel' reservation.pk %}" class="btn btn-warning btn-sm">キャンセル</a>
