@@ -460,7 +460,9 @@ def stripe_webhook(request):
     
     try:
         # イベントタイプに応じた処理
-        if event['type'] == 'customer.subscription.created':
+        if event['type'] == 'checkout.session.completed':
+            handle_checkout_session_completed(event['data']['object'])
+        elif event['type'] == 'customer.subscription.created':
             handle_subscription_created(event['data']['object'])
         elif event['type'] == 'customer.subscription.updated':
             handle_subscription_updated(event['data']['object'])
@@ -475,12 +477,52 @@ def stripe_webhook(request):
         webhook_log.processed = True
         webhook_log.save()
         
-    except:
-        webhook_log.error_message = 'エラーが発生しました'
+    except Exception as e:
+        webhook_log.error_message = str(e)
         webhook_log.save()
         return HttpResponse(status=500)
     
     return HttpResponse(status=200)
+
+
+def handle_checkout_session_completed(session_data):
+    """
+    Checkout セッション完了時の処理
+    プレミアム会員への切り替えを実行
+    """
+    try:
+        # セッションからカスタマーIDを取得
+        customer_id = session_data['customer']
+        
+        # ユーザーを特定
+        user = CustomUser.objects.get(stripe_customer_id=customer_id)
+        
+        # プレミアム会員に変更
+        user.is_premium = True
+        user.save()
+        
+        # サブスクリプション情報を取得して保存
+        if session_data.get('subscription'):
+            subscription_id = session_data['subscription']
+            subscription_data = stripe.Subscription.retrieve(subscription_id)
+            
+            # Subscriptionレコードを作成
+            Subscription.objects.update_or_create(
+                user=user,
+                stripe_subscription_id=subscription_id,
+                defaults={
+                    'stripe_customer_id': customer_id,
+                    'stripe_price_id': subscription_data['items']['data'][0]['price']['id'],
+                    'status': subscription_data['status'],
+                    'current_period_start': datetime.fromtimestamp(subscription_data['current_period_start']),
+                    'current_period_end': datetime.fromtimestamp(subscription_data['current_period_end']),
+                }
+            )
+        
+    except Exception as e:
+        # エラーログを出力（本番環境では適切なログ出力を行う）
+        print(f"Checkout session completion error: {e}")
+        raise
 
 
 def handle_subscription_created(subscription_data):
