@@ -52,3 +52,4 @@ class UserProfileForm(forms.ModelForm):
         if phone_number and not phone_number.replace('-', '').isdigit():
             raise forms.ValidationError('電話番号は数字とハイフンのみ入力可能です。')
         return phone_number
+

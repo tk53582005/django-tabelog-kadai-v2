@@ -620,3 +620,4 @@ def handle_payment_failed(invoice_data):
         
     except:
         pass
+

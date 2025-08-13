@@ -49,3 +49,4 @@ try:
     admin.site.unregister(SocialToken)
 except:
     pass
+

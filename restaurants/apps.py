@@ -6,3 +6,4 @@ class RestaurantsConfig(AppConfig):
     name = 'restaurants'
 
 
+

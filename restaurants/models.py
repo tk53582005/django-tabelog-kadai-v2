@@ -105,3 +105,4 @@ class Favorite(models.Model):
         return f"{self.user.email} - {self.restaurant.name}"
 
 
+

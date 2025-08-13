@@ -25,3 +25,4 @@ urlpatterns = [
     path('reservations/', views.ReservationListView.as_view(), name='reservation_list'),
 ]
 
+

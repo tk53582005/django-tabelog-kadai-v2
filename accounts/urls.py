@@ -32,3 +32,4 @@ urlpatterns = [
     path('card/set-default/', views.set_default_card, name='set_default_card'),
     path('card/remove/', views.remove_payment_method, name='remove_payment_method'),
 ]
+
