@@ -13,3 +13,4 @@ urlpatterns = [
 # 開発環境でのメディアファイル配信
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

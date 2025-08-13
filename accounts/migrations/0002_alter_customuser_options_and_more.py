@@ -66,3 +66,4 @@ class Migration(migrations.Migration):
             field=models.CharField(blank=True, max_length=15, null=True, verbose_name='電話番号'),
         ),
     ]
+

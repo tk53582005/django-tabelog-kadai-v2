@@ -24,3 +24,4 @@ urlpatterns = [
     path('reservation/<int:pk>/cancel/', views.ReservationCancelView.as_view(), name='reservation_cancel'),
     path('reservations/', views.ReservationListView.as_view(), name='reservation_list'),
 ]
+

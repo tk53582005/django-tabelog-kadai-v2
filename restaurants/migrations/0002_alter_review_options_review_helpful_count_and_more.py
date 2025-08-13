@@ -25,3 +25,4 @@ class Migration(migrations.Migration):
             field=models.BooleanField(default=True, verbose_name='承認済み'),
         ),
     ]
+

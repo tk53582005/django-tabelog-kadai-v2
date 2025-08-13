@@ -93,3 +93,4 @@ class ReservationForm(forms.ModelForm):
             raise ValidationError('正しい時間形式を選択してください。')
         
         return reservation_time
+

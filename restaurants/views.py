@@ -302,3 +302,4 @@ class ReservationCancelView(LoginRequiredMixin, UserPassesTestMixin, UpdateView)
     
     def get_success_url(self):
         return reverse('restaurants:reservation_list')
+

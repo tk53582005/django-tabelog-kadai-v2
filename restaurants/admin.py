@@ -33,3 +33,4 @@ class FavoriteAdmin(admin.ModelAdmin):
     list_display = ('user', 'restaurant', 'created_at')
     search_fields = ('user__email', 'restaurant__name')
     ordering = ('-created_at',)
+
