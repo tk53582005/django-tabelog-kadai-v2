@@ -17,19 +17,14 @@ import os
 
 pymysql.install_as_MySQLdb()
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY')
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-# Heroku対応: ALLOWED_HOSTSを更新
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.herokuapp.com']
 
-# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -39,20 +34,17 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     
-    # allauth
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
     
-    # アプリ
     'accounts',
     'restaurants',
 ]
 
-# Heroku対応: WhiteNoiseミドルウェアを追加
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Heroku静的ファイル対応
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -82,16 +74,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'nagoyameshi.wsgi.application'
 
-# Database
-# Heroku対応: JawsDB環境変数も考慮
 if 'JAWSDB_MARIA_URL' in os.environ:
-    # Heroku環境での設定
     import dj_database_url
     DATABASES = {
         'default': dj_database_url.parse(os.environ.get('JAWSDB_MARIA_URL'))
     }
 else:
-    # ローカル環境での設定
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
@@ -106,7 +94,6 @@ else:
         }
     }
 
-# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -122,31 +109,24 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Internationalization
 LANGUAGE_CODE = 'ja'
 TIME_ZONE = 'Asia/Tokyo'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-# Heroku対応: STATIC_ROOTを追加
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
-STATIC_ROOT = BASE_DIR / 'staticfiles'  # Heroku用
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# カスタムユーザーモデル
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
-# django-allauth設定
 SITE_ID = 1
 
 AUTHENTICATION_BACKENDS = [
@@ -154,27 +134,22 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-# メールアドレスでログイン
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 
-# リダイレクト設定
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
-# メール設定（開発用）
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# Stripe設定
 STRIPE_PUBLIC_KEY = config('STRIPE_PUBLIC_KEY', default='')
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
 STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET', default='')
 STRIPE_PRICE_ID_PREMIUM = config('STRIPE_PRICE_ID_PREMIUM', default='')
 
-# サブスクリプション設定（簡単な辞書）
 SUBSCRIPTION_SETTINGS = {
     'PREMIUM': {
         'price': 300,

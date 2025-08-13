@@ -9,7 +9,7 @@ class CustomUserAdmin(UserAdmin):
     list_display = ('email', 'first_name', 'last_name', 'is_premium', 'is_staff', 'date_joined')
     list_filter = ('is_premium', 'is_staff', 'is_superuser', 'date_joined')
     search_fields = ('email', 'first_name', 'last_name')
-    ordering = ('date_joined',)  # created_at → date_joined に変更
+    ordering = ('date_joined',)
     
     # フィールドセットの設定
     fieldsets = (
@@ -30,8 +30,6 @@ class CustomUserAdmin(UserAdmin):
     # 読み取り専用フィールド
     readonly_fields = ('date_joined', 'last_login')
 
-
-# 不要なモデルを管理画面から削除
 try:
     from allauth.account.models import EmailAddress
     admin.site.unregister(EmailAddress)

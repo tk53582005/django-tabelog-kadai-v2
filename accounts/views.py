@@ -520,7 +520,7 @@ def handle_checkout_session_completed(session_data):
             )
         
     except Exception as e:
-        # エラーログを出力（本番環境では適切なログ出力を行う）
+        # エラーログを出力
         print(f"Checkout session completion error: {e}")
         raise
 

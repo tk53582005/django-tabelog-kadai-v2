@@ -24,9 +24,7 @@ class CustomUser(AbstractUser):
         return self.email
     
     def get_subscription(self):
-        # 現在のサブスクリプションを取得
         return Subscription.objects.filter(user=self, status='active').first()
-
 
 class Subscription(models.Model):
     STATUS_CHOICES = [
