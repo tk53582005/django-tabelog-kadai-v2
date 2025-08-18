@@ -491,7 +491,7 @@ def cancel_subscription(request):
                             stripe_subscription_id=stripe_sub.id,
                             defaults={
                                 'stripe_customer_id': user.stripe_customer_id,
-                                'stripe_price_id': stripe_sub.items.data[0].price.id,
+                                'stripe_price_id': stripe_sub['items']['data'][0]['price']['id'],
                                 'status': stripe_sub.status,
                                 'current_period_start': datetime.fromtimestamp(stripe_sub.current_period_start),
                                 'current_period_end': datetime.fromtimestamp(stripe_sub.current_period_end),
