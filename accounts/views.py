@@ -488,7 +488,11 @@ def cancel_subscription(request):
                         
                 except stripe.error.StripeError as e:
                     return JsonResponse({
-                        'error': f'Stripeエラー: サブスクリプション情報の取得に失敗しました'
+                        'error': f'Stripeエラー: サブスクリプション情報の取得に失敗しました: {str(e)}'
+                    }, status=500)
+                except Exception as e:
+                    return JsonResponse({
+                        'error': f'サブスクリプション取得中にエラー: {str(e)}'
                     }, status=500)
             else:
                 return JsonResponse({
@@ -497,10 +501,15 @@ def cancel_subscription(request):
         
         # Stripeでサブスクリプションをキャンセル（期間終了時にキャンセル）
         try:
+            # デバッグ用：この行でエラーが発生しているかチェック
+            print(f"DEBUG: Modifying subscription {subscription.stripe_subscription_id}")
+            
             updated_subscription = stripe.Subscription.modify(
                 subscription.stripe_subscription_id,
                 cancel_at_period_end=True
             )
+            
+            print(f"DEBUG: Modification successful, type: {type(updated_subscription)}")
             
             # データベースのステータスも更新
             subscription.status = 'active'
@@ -512,18 +521,27 @@ def cancel_subscription(request):
             
             return JsonResponse({
                 'success': True,
-                'message': 'サブスクリプションのキャンセルを受け付けました。',
-                'redirect_url': '/accounts/subscription-management/'
+                'message': 'サブスクリプションのキャンセルを受け付けました。'
             })
             
         except stripe.error.StripeError as e:
             error_message = f'Stripeエラー: {str(e)}'
+            print(f"DEBUG: Stripe error: {error_message}")
+            return JsonResponse({
+                'error': error_message
+            }, status=500)
+        except Exception as e:
+            error_message = f'キャンセル処理中にエラー: {str(e)}'
+            print(f"DEBUG: General error: {error_message}")
             return JsonResponse({
                 'error': error_message
             }, status=500)
     
     except Exception as e:
         error_message = f'予期しないエラーが発生しました: {str(e)}'
+        print(f"DEBUG: Unexpected error: {error_message}")
+        import traceback
+        print(f"DEBUG: Traceback: {traceback.format_exc()}")
         return JsonResponse({
             'error': error_message
         }, status=500)
