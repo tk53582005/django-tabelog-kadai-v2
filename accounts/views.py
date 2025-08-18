@@ -484,17 +484,17 @@ def cancel_subscription(request):
                     if stripe_subscriptions.data:
                         # アクティブなサブスクリプションが見つかった場合、データベースに同期
                         stripe_sub = stripe_subscriptions.data[0]
-                        print(f"Syncing subscription: {stripe_sub.id}")
+                        print(f"Syncing subscription: {stripe_sub['id']}")
                         
                         subscription, created = Subscription.objects.update_or_create(
                             user=user,
-                            stripe_subscription_id=stripe_sub.id,
+                            stripe_subscription_id=stripe_sub['id'],
                             defaults={
                                 'stripe_customer_id': user.stripe_customer_id,
                                 'stripe_price_id': stripe_sub['items']['data'][0]['price']['id'],
-                                'status': stripe_sub.status,
-                                'current_period_start': datetime.fromtimestamp(stripe_sub.current_period_start),
-                                'current_period_end': datetime.fromtimestamp(stripe_sub.current_period_end),
+                                'status': stripe_sub['status'],
+                                'current_period_start': datetime.fromtimestamp(stripe_sub['current_period_start']),
+                                'current_period_end': datetime.fromtimestamp(stripe_sub['current_period_end']),
                             }
                         )
                         print(f"Subscription synced, created: {created}")
