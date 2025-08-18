@@ -35,21 +35,14 @@ class ReviewForm(forms.ModelForm):
 class ReservationForm(forms.ModelForm):
     # 30分刻みの時間選択肢
     TIME_CHOICES = [
-        ('18:00', '18:00'),
-        ('18:30', '18:30'),
-        ('19:00', '19:00'),
-        ('19:30', '19:30'),
-        ('20:00', '20:00'),
-        ('20:30', '20:30'),
-        ('21:00', '21:00'),
+        ('18:00:00', '18:00'),
+        ('18:30:00', '18:30'),
+        ('19:00:00', '19:00'),
+        ('19:30:00', '19:30'),
+        ('20:00:00', '20:00'),
+        ('20:30:00', '20:30'),
+        ('21:00:00', '21:00'),
     ]
-    
-    reservation_time = forms.ChoiceField(
-        choices=TIME_CHOICES,
-        widget=forms.Select(attrs={'class': 'form-select'}),
-        label='予約時間',
-        help_text='30分刻みでのご予約となります'
-    )
     
     class Meta:
         model = Reservation
@@ -60,6 +53,10 @@ class ReservationForm(forms.ModelForm):
                 'type': 'date',
                 'min': timezone.now().date().isoformat()
             }),
+            'reservation_time': forms.Select(
+                choices=TIME_CHOICES,
+                attrs={'class': 'form-select'}
+            ),
             'number_of_people': forms.Select(
                 choices=[(i, f'{i}名') for i in range(1, 11)],
                 attrs={'class': 'form-select'}
@@ -67,6 +64,7 @@ class ReservationForm(forms.ModelForm):
         }
         labels = {
             'reservation_date': '予約日',
+            'reservation_time': '予約時間',
             'number_of_people': '人数'
         }
     
@@ -88,21 +86,29 @@ class ReservationForm(forms.ModelForm):
         return reservation_date
     
     def clean_reservation_time(self):
-        reservation_time_str = self.cleaned_data.get('reservation_time')
+        reservation_time = self.cleaned_data.get('reservation_time')
         
-        if not reservation_time_str:
+        if not reservation_time:
             raise ValidationError('予約時間を選択してください。')
         
-        # 30分刻みかチェック
-        valid_times = [choice[0] for choice in self.TIME_CHOICES]
-        if reservation_time_str not in valid_times:
-            raise ValidationError('30分刻みの時間を選択してください。')
+        # 30分刻みの時間のみ許可
+        valid_times = [
+            time(18, 0), time(18, 30), time(19, 0), time(19, 30),
+            time(20, 0), time(20, 30), time(21, 0)
+        ]
         
-        # 文字列をtimeオブジェクトに変換
-        try:
-            reservation_time = datetime.strptime(reservation_time_str, '%H:%M').time()
-        except ValueError:
-            raise ValidationError('正しい時間形式を選択してください。')
+        # 文字列の場合はtimeオブジェクトに変換
+        if isinstance(reservation_time, str):
+            try:
+                reservation_time = datetime.strptime(reservation_time, '%H:%M:%S').time()
+            except ValueError:
+                try:
+                    reservation_time = datetime.strptime(reservation_time, '%H:%M').time()
+                except ValueError:
+                    raise ValidationError('正しい時間形式を選択してください。')
+        
+        if reservation_time not in valid_times:
+            raise ValidationError('営業時間内の30分刻みの時間を選択してください。（18:00-21:00）')
         
         return reservation_time
     

@@ -43,27 +43,20 @@
                         <!-- 予約日 -->
                         <div class="mb-3">
                             <label for="id_reservation_date" class="form-label">予約日</label>
-                            <input type="date" class="form-control" id="id_reservation_date" name="reservation_date" required>
+                            {{ form.reservation_date }}
                         </div>
 
-                        <!-- 予約時間 -->
+                        <!-- 予約時間（30分刻み制限） -->
                         <div class="mb-3">
                             <label for="id_reservation_time" class="form-label">予約時間</label>
-                            <input type="time" class="form-control" id="id_reservation_time" name="reservation_time" required>
+                            {{ form.reservation_time }}
+                            <div class="form-text">営業時間：18:00-21:00（30分刻みでのご予約）</div>
                         </div>
 
                         <!-- 人数 -->
                         <div class="mb-3">
                             <label for="id_number_of_people" class="form-label">人数</label>
-                            <select class="form-control" id="id_number_of_people" name="number_of_people" required>
-                                <option value="">選択してください</option>
-                                <option value="1">1名</option>
-                                <option value="2">2名</option>
-                                <option value="3">3名</option>
-                                <option value="4">4名</option>
-                                <option value="5">5名</option>
-                                <option value="6">6名</option>
-                            </select>
+                            {{ form.number_of_people }}
                         </div>
 
                         <div class="d-flex justify-content-between">
@@ -76,6 +69,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-
+{% endblock %>
