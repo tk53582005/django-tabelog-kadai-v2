@@ -32,18 +32,19 @@ class ReviewForm(forms.ModelForm):
         return comment
 
 
+# 30分刻みの時間選択肢をクラス外で定義
+TIME_CHOICES = [
+    ('18:00:00', '18:00'),
+    ('18:30:00', '18:30'),
+    ('19:00:00', '19:00'),
+    ('19:30:00', '19:30'),
+    ('20:00:00', '20:00'),
+    ('20:30:00', '20:30'),
+    ('21:00:00', '21:00'),
+]
+
+
 class ReservationForm(forms.ModelForm):
-    # 30分刻みの時間選択肢
-    TIME_CHOICES = [
-        ('18:00:00', '18:00'),
-        ('18:30:00', '18:30'),
-        ('19:00:00', '19:00'),
-        ('19:30:00', '19:30'),
-        ('20:00:00', '20:00'),
-        ('20:30:00', '20:30'),
-        ('21:00:00', '21:00'),
-    ]
-    
     class Meta:
         model = Reservation
         fields = ['reservation_date', 'reservation_time', 'number_of_people']
