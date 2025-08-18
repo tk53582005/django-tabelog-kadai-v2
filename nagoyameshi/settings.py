@@ -14,6 +14,7 @@ from pathlib import Path
 import pymysql
 from decouple import config
 import os
+import ssl
 
 pymysql.install_as_MySQLdb()
 
@@ -136,14 +137,52 @@ AUTHENTICATION_BACKENDS = [
 
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_EMAIL_VERIFICATION = 'none'
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# メール設定
+if 'DYNO' in os.environ:
+    # Heroku本番環境
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.sendgrid.net'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = 'apikey'
+    EMAIL_HOST_PASSWORD = config('SENDGRID_API_KEY', default='')
+    DEFAULT_FROM_EMAIL = 'noreply@nagoyameshi.herokuapp.com'
+else:
+    # ローカル開発環境
+    email_backend = config('EMAIL_BACKEND', default='console')
+    
+    if email_backend == 'smtp':
+        EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+        EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+        EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+        EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+        EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+        EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+        DEFAULT_FROM_EMAIL = config('EMAIL_HOST_USER', default='noreply@nagoyameshi.com')
+        
+        # SSL証明書エラー対策
+        EMAIL_USE_SSL = False
+        EMAIL_TIMEOUT = 60
+        
+        # SSL証明書検証を緩和
+        if DEBUG:
+            import ssl
+            ssl._create_default_https_context = ssl._create_unverified_context
+    else:
+        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+        DEFAULT_FROM_EMAIL = 'noreply@nagoyameshi.com'
+
+# allauth設定
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 
 STRIPE_PUBLIC_KEY = config('STRIPE_PUBLIC_KEY', default='')
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
@@ -161,6 +200,3 @@ SUBSCRIPTION_SETTINGS = {
         ]
     }
 }
-
-
-

@@ -24,7 +24,17 @@ class CustomUser(AbstractUser):
         return self.email
     
     def get_subscription(self):
-        return Subscription.objects.filter(user=self, status='active').first()
+        """アクティブなサブスクリプションを取得"""
+        return Subscription.objects.filter(
+            user=self,
+            status='active',
+            current_period_end__gt=timezone.now()
+        ).first()
+    
+    def has_active_subscription(self):
+        """有効なサブスクリプションがあるかチェック"""
+        return self.get_subscription() is not None
+
 
 class Subscription(models.Model):
     STATUS_CHOICES = [
@@ -60,11 +70,24 @@ class Subscription(models.Model):
         super().save(*args, **kwargs)
         
         # ユーザーのプレミアム状態を更新
-        if self.status == 'active' and self.current_period_end > timezone.now():
+        current_time = timezone.now()
+        
+        # アクティブで期間内の場合はプレミアム会員
+        if (self.status == 'active' and 
+            self.current_period_end > current_time):
             self.user.is_premium = True
         else:
-            self.user.is_premium = False
+            # 他にアクティブなサブスクリプションがあるかチェック
+            other_active = Subscription.objects.filter(
+                user=self.user,
+                status='active',
+                current_period_end__gt=current_time
+            ).exclude(id=self.id).exists()
+            
+            if not other_active:
+                self.user.is_premium = False
         
+        # Stripe関連情報を同期
         self.user.stripe_customer_id = self.stripe_customer_id
         self.user.stripe_subscription_id = self.stripe_subscription_id
         self.user.save()
@@ -109,5 +132,3 @@ class StripeWebhookLog(models.Model):
     
     def __str__(self):
         return f"{self.event_type} - {self.stripe_event_id}"
-
-

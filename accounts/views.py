@@ -258,17 +258,48 @@ def set_default_card(request):
 def remove_payment_method(request):
     try:
         payment_method_id = request.POST.get('payment_method_id')
+        user = request.user
         
         if not payment_method_id:
             return JsonResponse({'error': '支払い方法IDが必要です'}, status=400)
+        
+        # プレミアム会員で支払い方法が複数ある場合のみ削除可能
+        if user.is_premium and user.stripe_customer_id:
+            # 現在登録されている支払い方法の数を確認
+            payment_methods = stripe.PaymentMethod.list(
+                customer=user.stripe_customer_id,
+                type="card"
+            )
+            
+            if len(payment_methods.data) <= 1:
+                return JsonResponse({
+                    'error': '最後の支払い方法は削除できません。代替のカードを先に登録してください。'
+                }, status=400)
+            
+            # デフォルトの支払い方法を確認
+            customer = stripe.Customer.retrieve(user.stripe_customer_id)
+            default_payment_method = customer.invoice_settings.default_payment_method
+            
+            if payment_method_id == default_payment_method:
+                # 削除するカードがデフォルトの場合、他のカードをデフォルトに設定
+                other_payment_methods = [pm for pm in payment_methods.data if pm.id != payment_method_id]
+                if other_payment_methods:
+                    stripe.Customer.modify(
+                        user.stripe_customer_id,
+                        invoice_settings={
+                            'default_payment_method': other_payment_methods[0].id,
+                        },
+                    )
         
         # 支払い方法をデタッチ
         stripe.PaymentMethod.detach(payment_method_id)
         
         return JsonResponse({'success': True, 'message': 'カードを削除しました'})
         
-    except:
-        return JsonResponse({'error': 'エラーが発生しました'}, status=400)
+    except stripe.error.StripeError as e:
+        return JsonResponse({'error': f'Stripeエラー: {str(e)}'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': f'エラーが発生しました: {str(e)}'}, status=500)
 
 
 @login_required
@@ -413,23 +444,84 @@ class SubscriptionManageView(LoginRequiredMixin, TemplateView):
 def cancel_subscription(request):
     try:
         user = request.user
-        subscription = user.get_subscription()
+        
+        # プレミアム会員でない場合
+        if not user.is_premium:
+            return JsonResponse({
+                'error': 'プレミアム会員ではありません'
+            }, status=400)
+        
+        # データベースからアクティブなサブスクリプションを取得
+        subscription = Subscription.objects.filter(
+            user=user, 
+            status='active'
+        ).first()
         
         if not subscription:
-            return JsonResponse({'error': 'アクティブなサブスクリプションがありません'}, status=400)
+            # Stripeから直接サブスクリプション情報を取得して同期
+            if user.stripe_customer_id:
+                try:
+                    stripe_subscriptions = stripe.Subscription.list(
+                        customer=user.stripe_customer_id,
+                        status='active'
+                    )
+                    
+                    if stripe_subscriptions.data:
+                        # アクティブなサブスクリプションが見つかった場合、データベースに同期
+                        stripe_sub = stripe_subscriptions.data[0]
+                        
+                        subscription, created = Subscription.objects.update_or_create(
+                            user=user,
+                            stripe_subscription_id=stripe_sub.id,
+                            defaults={
+                                'stripe_customer_id': user.stripe_customer_id,
+                                'stripe_price_id': stripe_sub.items.data[0].price.id,
+                                'status': stripe_sub.status,
+                                'current_period_start': datetime.fromtimestamp(stripe_sub.current_period_start),
+                                'current_period_end': datetime.fromtimestamp(stripe_sub.current_period_end),
+                            }
+                        )
+                    else:
+                        return JsonResponse({
+                            'error': 'アクティブなサブスクリプションがありません'
+                        }, status=400)
+                        
+                except stripe.error.StripeError as e:
+                    return JsonResponse({
+                        'error': f'Stripeエラー: サブスクリプション情報の取得に失敗しました'
+                    }, status=500)
+            else:
+                return JsonResponse({
+                    'error': 'アクティブなサブスクリプションがありません'
+                }, status=400)
         
-        # Stripeでサブスクリプションをキャンセル
-        stripe.Subscription.modify(
-            subscription.stripe_subscription_id,
-            cancel_at_period_end=True
-        )
-        
-        messages.success(request, 'サブスクリプションのキャンセルを受け付けました。')
-        
-        return JsonResponse({'success': True})
+        # Stripeでサブスクリプションをキャンセル（期間終了時にキャンセル）
+        try:
+            stripe.Subscription.modify(
+                subscription.stripe_subscription_id,
+                cancel_at_period_end=True
+            )
+            
+            # データベースのステータスも更新
+            subscription.status = 'active'  # 期間終了まではアクティブのまま
+            subscription.save()
+            
+            messages.success(request, f'サブスクリプションのキャンセルを受け付けました。{subscription.current_period_end.strftime("%Y年%m月%d日")}まで利用可能です。')
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'サブスクリプションのキャンセルを受け付けました。'
+            })
+            
+        except stripe.error.StripeError as e:
+            return JsonResponse({
+                'error': f'Stripeエラー: {str(e)}'
+            }, status=500)
     
-    except:
-        return JsonResponse({'error': '予期しないエラーが発生しました'}, status=500)
+    except Exception as e:
+        return JsonResponse({
+            'error': f'予期しないエラーが発生しました: {str(e)}'
+        }, status=500)
 
 
 @csrf_exempt
@@ -620,4 +712,3 @@ def handle_payment_failed(invoice_data):
         
     except:
         pass
-
