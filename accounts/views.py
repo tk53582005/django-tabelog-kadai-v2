@@ -497,30 +497,35 @@ def cancel_subscription(request):
         
         # Stripeでサブスクリプションをキャンセル（期間終了時にキャンセル）
         try:
-            stripe.Subscription.modify(
+            updated_subscription = stripe.Subscription.modify(
                 subscription.stripe_subscription_id,
                 cancel_at_period_end=True
             )
             
             # データベースのステータスも更新
-            subscription.status = 'active'  # 期間終了まではアクティブのまま
+            subscription.status = 'active'
             subscription.save()
             
-            messages.success(request, f'サブスクリプションのキャンセルを受け付けました。{subscription.current_period_end.strftime("%Y年%m月%d日")}まで利用可能です。')
+            # 成功メッセージ
+            success_message = f'サブスクリプションのキャンセルを受け付けました。{subscription.current_period_end.strftime("%Y年%m月%d日")}まで利用可能です。'
+            messages.success(request, success_message)
             
             return JsonResponse({
                 'success': True,
-                'message': 'サブスクリプションのキャンセルを受け付けました。'
+                'message': 'サブスクリプションのキャンセルを受け付けました。',
+                'redirect_url': '/accounts/subscription-management/'
             })
             
         except stripe.error.StripeError as e:
+            error_message = f'Stripeエラー: {str(e)}'
             return JsonResponse({
-                'error': f'Stripeエラー: {str(e)}'
+                'error': error_message
             }, status=500)
     
     except Exception as e:
+        error_message = f'予期しないエラーが発生しました: {str(e)}'
         return JsonResponse({
-            'error': f'予期しないエラーが発生しました: {str(e)}'
+            'error': error_message
         }, status=500)
 
 
