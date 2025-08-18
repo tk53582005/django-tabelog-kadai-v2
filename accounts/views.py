@@ -486,6 +486,20 @@ def cancel_subscription(request):
                         stripe_sub = stripe_subscriptions.data[0]
                         print(f"Syncing subscription: {stripe_sub['id']}")
                         
+                        # 詳細デバッグ情報を追加
+                        print(f"DEBUG: stripe_sub type: {type(stripe_sub)}")
+                        print(f"DEBUG: stripe_sub dir: {[attr for attr in dir(stripe_sub) if not attr.startswith('_')]}")
+                        print(f"DEBUG: hasattr items: {hasattr(stripe_sub, 'items')}")
+                        print(f"DEBUG: hasattr current_period_start: {hasattr(stripe_sub, 'current_period_start')}")
+                        
+                        # 安全にアクセスしてみる
+                        try:
+                            print(f"DEBUG: stripe_sub.id: {stripe_sub.id}")
+                            print(f"DEBUG: stripe_sub.status: {stripe_sub.status}")
+                            print(f"DEBUG: stripe_sub.current_period_start: {stripe_sub.current_period_start}")
+                        except Exception as e:
+                            print(f"DEBUG: Error accessing attributes: {e}")
+                        
                         subscription, created = Subscription.objects.update_or_create(
                             user=user,
                             stripe_subscription_id=stripe_sub['id'],
