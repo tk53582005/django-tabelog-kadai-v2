@@ -451,6 +451,8 @@ def sync_subscription_from_stripe(user, stripe_sub):
             # 既に辞書形式の場合
             stripe_dict = stripe_sub
         
+        print(f"DEBUG: Full stripe_dict keys: {list(stripe_dict.keys())}")
+        
         # 必要な情報を安全に取得
         subscription_id = stripe_dict.get('id')
         status = stripe_dict.get('status')
@@ -459,15 +461,35 @@ def sync_subscription_from_stripe(user, stripe_sub):
         current_period_start = None
         current_period_end = None
         
+        # 利用可能な期間関連フィールドをすべて確認
+        period_fields = ['current_period_start', 'current_period_end', 'created', 'start_date', 'trial_end']
+        for field in period_fields:
+            if field in stripe_dict:
+                print(f"DEBUG: Found {field}: {stripe_dict[field]}")
+        
         # current_period_startの取得を試行
-        if 'current_period_start' in stripe_dict:
+        if 'current_period_start' in stripe_dict and stripe_dict['current_period_start']:
             current_period_start = datetime.fromtimestamp(stripe_dict['current_period_start'])
-        elif 'created' in stripe_dict:
+        elif 'created' in stripe_dict and stripe_dict['created']:
             current_period_start = datetime.fromtimestamp(stripe_dict['created'])
+        elif 'start_date' in stripe_dict and stripe_dict['start_date']:
+            current_period_start = datetime.fromtimestamp(stripe_dict['start_date'])
         
         # current_period_endの取得を試行
-        if 'current_period_end' in stripe_dict:
+        if 'current_period_end' in stripe_dict and stripe_dict['current_period_end']:
             current_period_end = datetime.fromtimestamp(stripe_dict['current_period_end'])
+        elif 'trial_end' in stripe_dict and stripe_dict['trial_end']:
+            current_period_end = datetime.fromtimestamp(stripe_dict['trial_end'])
+        
+        print(f"DEBUG: current_period_start: {current_period_start}")
+        print(f"DEBUG: current_period_end: {current_period_end}")
+        
+        # current_period_endがNullの場合、デフォルト値を設定
+        if not current_period_end and current_period_start:
+            # 1ヶ月後をデフォルトとして設定
+            from datetime import timedelta
+            current_period_end = current_period_start + timedelta(days=30)
+            print(f"DEBUG: Set default current_period_end: {current_period_end}")
         
         # price_idの取得
         price_id = None
@@ -475,6 +497,10 @@ def sync_subscription_from_stripe(user, stripe_sub):
             items_data = stripe_dict['items']['data']
             if len(items_data) > 0 and 'price' in items_data[0]:
                 price_id = items_data[0]['price']['id']
+        
+        # 必須フィールドがない場合はエラー
+        if not current_period_end:
+            raise ValueError("current_period_end could not be determined from Stripe data")
         
         # Subscriptionレコードを作成または更新
         subscription, created = Subscription.objects.update_or_create(
