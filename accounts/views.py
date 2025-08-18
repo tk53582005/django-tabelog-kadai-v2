@@ -782,3 +782,16 @@ def handle_payment_failed(invoice_data):
         
         # 失敗した決済履歴を作成
         PaymentHistory.objects.create(
+            user=subscription.user,
+            subscription=subscription,
+            stripe_payment_intent_id=invoice_data.get('payment_intent', ''),
+            stripe_invoice_id=invoice_data['id'],
+            amount=invoice_data['amount_due'] / 100,
+            currency=invoice_data['currency'],
+            status='failed',
+            description="プレミアム会員 月額料金（決済失敗）",
+            failure_reason='決済に失敗しました',
+        )
+        
+    except:
+        pass
