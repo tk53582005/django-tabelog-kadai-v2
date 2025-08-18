@@ -442,33 +442,49 @@ class SubscriptionManageView(LoginRequiredMixin, TemplateView):
 @login_required
 @require_POST
 def cancel_subscription(request):
+    print("=== CANCEL SUBSCRIPTION DEBUG START ===")
+    print(f"Request method: {request.method}")
+    print(f"Request POST data: {dict(request.POST)}")
+    print(f"User: {request.user}")
+    print(f"User authenticated: {request.user.is_authenticated}")
+    print(f"User is_premium: {request.user.is_premium}")
+    
     try:
         user = request.user
         
         # プレミアム会員でない場合
         if not user.is_premium:
+            print("ERROR: User is not premium")
             return JsonResponse({
                 'error': 'プレミアム会員ではありません'
             }, status=400)
         
+        print("=== Getting subscription from database ===")
         # データベースからアクティブなサブスクリプションを取得
         subscription = Subscription.objects.filter(
             user=user, 
             status='active'
         ).first()
         
+        print(f"Database subscription found: {subscription}")
+        
         if not subscription:
+            print("=== No subscription in DB, checking Stripe ===")
             # Stripeから直接サブスクリプション情報を取得して同期
             if user.stripe_customer_id:
                 try:
+                    print(f"Checking Stripe customer: {user.stripe_customer_id}")
                     stripe_subscriptions = stripe.Subscription.list(
                         customer=user.stripe_customer_id,
                         status='active'
                     )
                     
+                    print(f"Stripe subscriptions found: {len(stripe_subscriptions.data)}")
+                    
                     if stripe_subscriptions.data:
                         # アクティブなサブスクリプションが見つかった場合、データベースに同期
                         stripe_sub = stripe_subscriptions.data[0]
+                        print(f"Syncing subscription: {stripe_sub.id}")
                         
                         subscription, created = Subscription.objects.update_or_create(
                             user=user,
@@ -481,44 +497,52 @@ def cancel_subscription(request):
                                 'current_period_end': datetime.fromtimestamp(stripe_sub.current_period_end),
                             }
                         )
+                        print(f"Subscription synced, created: {created}")
                     else:
+                        print("ERROR: No active subscriptions in Stripe")
                         return JsonResponse({
                             'error': 'アクティブなサブスクリプションがありません'
                         }, status=400)
                         
                 except stripe.error.StripeError as e:
+                    print(f"Stripe error during sync: {str(e)}")
                     return JsonResponse({
                         'error': f'Stripeエラー: サブスクリプション情報の取得に失敗しました: {str(e)}'
                     }, status=500)
                 except Exception as e:
+                    print(f"General error during sync: {str(e)}")
                     return JsonResponse({
                         'error': f'サブスクリプション取得中にエラー: {str(e)}'
                     }, status=500)
             else:
+                print("ERROR: No stripe_customer_id")
                 return JsonResponse({
                     'error': 'アクティブなサブスクリプションがありません'
                 }, status=400)
         
         # Stripeでサブスクリプションをキャンセル（期間終了時にキャンセル）
         try:
-            # デバッグ用：この行でエラーが発生しているかチェック
-            print(f"DEBUG: Modifying subscription {subscription.stripe_subscription_id}")
+            print(f"=== Modifying Stripe subscription: {subscription.stripe_subscription_id} ===")
             
             updated_subscription = stripe.Subscription.modify(
                 subscription.stripe_subscription_id,
                 cancel_at_period_end=True
             )
             
-            print(f"DEBUG: Modification successful, type: {type(updated_subscription)}")
+            print(f"=== Stripe modification successful ===")
+            print(f"Updated subscription ID: {updated_subscription.id}")
+            print(f"Cancel at period end: {updated_subscription.cancel_at_period_end}")
             
             # データベースのステータスも更新
-            subscription.status = 'active'
+            subscription.status = 'active'  # cancel_at_period_endの場合はactiveのまま
             subscription.save()
+            print("=== Database status updated ===")
             
             # 成功メッセージ
             success_message = f'サブスクリプションのキャンセルを受け付けました。{subscription.current_period_end.strftime("%Y年%m月%d日")}まで利用可能です。'
             messages.success(request, success_message)
             
+            print("=== SUCCESS: Subscription cancellation completed ===")
             return JsonResponse({
                 'success': True,
                 'message': 'サブスクリプションのキャンセルを受け付けました。'
@@ -526,22 +550,24 @@ def cancel_subscription(request):
             
         except stripe.error.StripeError as e:
             error_message = f'Stripeエラー: {str(e)}'
-            print(f"DEBUG: Stripe error: {error_message}")
+            print(f"=== STRIPE ERROR: {error_message} ===")
             return JsonResponse({
                 'error': error_message
             }, status=500)
         except Exception as e:
             error_message = f'キャンセル処理中にエラー: {str(e)}'
-            print(f"DEBUG: General error: {error_message}")
+            print(f"=== GENERAL ERROR during cancellation: {error_message} ===")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
             return JsonResponse({
                 'error': error_message
             }, status=500)
     
     except Exception as e:
         error_message = f'予期しないエラーが発生しました: {str(e)}'
-        print(f"DEBUG: Unexpected error: {error_message}")
+        print(f"=== UNEXPECTED ERROR: {error_message} ===")
         import traceback
-        print(f"DEBUG: Traceback: {traceback.format_exc()}")
+        print(f"Traceback: {traceback.format_exc()}")
         return JsonResponse({
             'error': error_message
         }, status=500)
