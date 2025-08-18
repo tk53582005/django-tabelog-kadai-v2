@@ -10,9 +10,10 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.conf import settings
+from django.utils import timezone
 import stripe
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from .models import CustomUser, Subscription, PaymentHistory, StripeWebhookLog
 from .forms import UserProfileForm
 
@@ -467,29 +468,37 @@ def sync_subscription_from_stripe(user, stripe_sub):
             if field in stripe_dict:
                 print(f"DEBUG: Found {field}: {stripe_dict[field]}")
         
-        # current_period_startの取得を試行
+        # current_period_startの取得を試行（タイムゾーン対応）
         if 'current_period_start' in stripe_dict and stripe_dict['current_period_start']:
-            current_period_start = datetime.fromtimestamp(stripe_dict['current_period_start'])
+            current_period_start = timezone.make_aware(datetime.fromtimestamp(stripe_dict['current_period_start']))
         elif 'created' in stripe_dict and stripe_dict['created']:
-            current_period_start = datetime.fromtimestamp(stripe_dict['created'])
+            current_period_start = timezone.make_aware(datetime.fromtimestamp(stripe_dict['created']))
         elif 'start_date' in stripe_dict and stripe_dict['start_date']:
-            current_period_start = datetime.fromtimestamp(stripe_dict['start_date'])
+            current_period_start = timezone.make_aware(datetime.fromtimestamp(stripe_dict['start_date']))
         
-        # current_period_endの取得を試行
+        # current_period_endの取得を試行（タイムゾーン対応）
         if 'current_period_end' in stripe_dict and stripe_dict['current_period_end']:
-            current_period_end = datetime.fromtimestamp(stripe_dict['current_period_end'])
+            current_period_end = timezone.make_aware(datetime.fromtimestamp(stripe_dict['current_period_end']))
         elif 'trial_end' in stripe_dict and stripe_dict['trial_end']:
-            current_period_end = datetime.fromtimestamp(stripe_dict['trial_end'])
+            current_period_end = timezone.make_aware(datetime.fromtimestamp(stripe_dict['trial_end']))
         
         print(f"DEBUG: current_period_start: {current_period_start}")
         print(f"DEBUG: current_period_end: {current_period_end}")
         
-        # current_period_endがNullの場合、デフォルト値を設定
+        # current_period_endがNullの場合、デフォルト値を設定（タイムゾーン対応）
         if not current_period_end and current_period_start:
             # 1ヶ月後をデフォルトとして設定
-            from datetime import timedelta
             current_period_end = current_period_start + timedelta(days=30)
             print(f"DEBUG: Set default current_period_end: {current_period_end}")
+        elif not current_period_end:
+            # current_period_startもない場合は現在時刻から1ヶ月後
+            current_period_end = timezone.now() + timedelta(days=30)
+            print(f"DEBUG: Set fallback current_period_end: {current_period_end}")
+        
+        # current_period_startがない場合のデフォルト設定
+        if not current_period_start:
+            current_period_start = timezone.now()
+            print(f"DEBUG: Set default current_period_start: {current_period_start}")
         
         # price_idの取得
         price_id = None
@@ -497,10 +506,6 @@ def sync_subscription_from_stripe(user, stripe_sub):
             items_data = stripe_dict['items']['data']
             if len(items_data) > 0 and 'price' in items_data[0]:
                 price_id = items_data[0]['price']['id']
-        
-        # 必須フィールドがない場合はエラー
-        if not current_period_end:
-            raise ValueError("current_period_end could not be determined from Stripe data")
         
         # Subscriptionレコードを作成または更新
         subscription, created = Subscription.objects.update_or_create(
@@ -519,6 +524,8 @@ def sync_subscription_from_stripe(user, stripe_sub):
         
     except Exception as e:
         print(f"Sync error: {e}")
+        import traceback
+        traceback.print_exc()
         raise
 
 
@@ -749,13 +756,17 @@ def handle_subscription_updated(subscription_data):
             stripe_subscription_id=subscription_data['id']
         )
         
-        # ステータスと期間を安全に更新
+        # ステータスと期間を安全に更新（タイムゾーン対応）
         subscription.status = subscription_data.get('status')
         
         if 'current_period_start' in subscription_data:
-            subscription.current_period_start = datetime.fromtimestamp(subscription_data['current_period_start'])
+            subscription.current_period_start = timezone.make_aware(
+                datetime.fromtimestamp(subscription_data['current_period_start'])
+            )
         if 'current_period_end' in subscription_data:
-            subscription.current_period_end = datetime.fromtimestamp(subscription_data['current_period_end'])
+            subscription.current_period_end = timezone.make_aware(
+                datetime.fromtimestamp(subscription_data['current_period_end'])
+            )
         
         subscription.save()
         
@@ -783,7 +794,7 @@ def handle_payment_succeeded(invoice_data):
             stripe_subscription_id=invoice_data['subscription']
         )
         
-        # 決済履歴を作成
+        # 決済履歴を作成（タイムゾーン対応）
         PaymentHistory.objects.create(
             user=subscription.user,
             subscription=subscription,
@@ -793,7 +804,9 @@ def handle_payment_succeeded(invoice_data):
             currency=invoice_data['currency'],
             status='succeeded',
             description="プレミアム会員 月額料金",
-            paid_at=datetime.fromtimestamp(invoice_data['status_transitions']['paid_at']),
+            paid_at=timezone.make_aware(
+                datetime.fromtimestamp(invoice_data['status_transitions']['paid_at'])
+            ),
         )
         
     except:
