@@ -32,7 +32,6 @@ class ReviewForm(forms.ModelForm):
         return comment
 
 
-# 30分刻みの時間選択肢をクラス外で定義
 TIME_CHOICES = [
     ('18:00:00', '18:00'),
     ('18:30:00', '18:30'),
@@ -120,7 +119,9 @@ class ReservationForm(forms.ModelForm):
         
         if reservation_date and reservation_time:
             # 現在時刻から2時間後以降の予約のみ受付
-            reservation_datetime = datetime.combine(reservation_date, reservation_time)
+            reservation_datetime = timezone.make_aware(
+                datetime.combine(reservation_date, reservation_time)
+            )
             min_datetime = timezone.now() + timedelta(hours=2)
             
             if reservation_datetime < min_datetime:
