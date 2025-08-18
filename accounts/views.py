@@ -434,6 +434,18 @@ class SubscriptionManageView(LoginRequiredMixin, TemplateView):
         subscription = user.get_subscription()
         context['subscription'] = subscription
         
+        # Stripeからキャンセル状態を確認
+        is_cancelled = False
+        if subscription and subscription.stripe_subscription_id:
+            try:
+                stripe_subscription = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
+                is_cancelled = stripe_subscription.cancel_at_period_end
+                print(f"DEBUG: Stripe subscription cancel_at_period_end: {is_cancelled}")
+            except:
+                pass
+        
+        context['is_cancelled'] = is_cancelled
+        
         # 決済履歴
         context['payment_history'] = PaymentHistory.objects.filter(user=user).order_by('-created_at')
         

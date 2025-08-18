@@ -52,7 +52,11 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5>プレミアム会員管理</h5>
-                    <span class="badge bg-success">アクティブ</span>
+                    {% if is_cancelled %}
+                        <span class="badge bg-warning">キャンセル済み</span>
+                    {% else %}
+                        <span class="badge bg-success">アクティブ</span>
+                    {% endif %}
                 </div>
                 <div class="card-body">
                     <!-- サブスクリプション情報 -->
@@ -79,16 +83,32 @@
                             </div>
 
                             {% if subscription %}
-                            <div class="alert alert-info">
-                                <strong>次回更新まで {{ subscription.days_until_renewal }}日</strong><br>
-                                {{ subscription.current_period_end|date:"Y年m月d日" }} に自動更新されます
-                            </div>
+                                {% if is_cancelled %}
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <strong>キャンセル済み</strong><br>
+                                        {{ subscription.current_period_end|date:"Y年m月d日" }}まで利用可能です。この日以降はプレミアム機能が停止します。
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-info">
+                                        <strong>次回更新まで {{ subscription.days_until_renewal }}日</strong><br>
+                                        {{ subscription.current_period_end|date:"Y年m月d日" }} に自動更新されます
+                                    </div>
+                                {% endif %}
                             {% endif %}
 
                             <div class="text-end">
-                                <button class="btn btn-danger" onclick="confirmCancel()">
-                                    キャンセル
-                                </button>
+                                {% if is_cancelled %}
+                                    <div class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        このサブスクリプションは既にキャンセル済みです
+                                    </div>
+                                {% else %}
+                                    <button class="btn btn-danger" onclick="confirmCancel()">
+                                        <i class="fas fa-times me-1"></i>
+                                        キャンセル
+                                    </button>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -143,7 +163,11 @@
                                 <div class="card-body text-center">
                                     <h6>レストランを予約</h6>
                                     <p class="text-muted small">
-                                        プレミアム機能を活用してお気に入りの店舗を予約
+                                        {% if is_cancelled %}
+                                            {{ subscription.current_period_end|date:"Y年m月d日" }}まで予約機能をご利用いただけます
+                                        {% else %}
+                                            プレミアム機能を活用してお気に入りの店舗を予約
+                                        {% endif %}
                                     </p>
                                     <a href="{% url 'restaurants:index' %}" class="btn btn-primary">
                                         レストランを探す
@@ -166,13 +190,30 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- キャンセル済みの場合の再入会案内 -->
+                    {% if is_cancelled %}
+                    <div class="card mt-4 border-primary">
+                        <div class="card-body text-center">
+                            <h6 class="text-primary">プレミアム会員を継続しませんか？</h6>
+                            <p class="text-muted small mb-3">
+                                いつでも再度プレミアム会員になることができます
+                            </p>
+                            <a href="{% url 'accounts:subscription_plan' %}" class="btn btn-primary">
+                                <i class="fas fa-crown me-1"></i>
+                                プレミアム会員になる
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- キャンセル確認モーダル -->
+<!-- キャンセル確認モーダル（アクティブな場合のみ表示） -->
+{% if not is_cancelled %}
 <div class="modal fade" id="cancelModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -232,8 +273,7 @@ function cancelSubscription() {
     });
 }
 </script>
+{% endif %}
 
 {% csrf_token %}
 {% endblock %}
-
-
