@@ -439,6 +439,63 @@ class SubscriptionManageView(LoginRequiredMixin, TemplateView):
         return context
 
 
+def sync_subscription_from_stripe(user, stripe_sub):
+    """
+    StripeのSubscriptionオブジェクトからデータベースに同期する関数
+    """
+    try:
+        # Stripeオブジェクトを辞書形式に変換
+        if hasattr(stripe_sub, 'to_dict'):
+            stripe_dict = stripe_sub.to_dict()
+        else:
+            # 既に辞書形式の場合
+            stripe_dict = stripe_sub
+        
+        # 必要な情報を安全に取得
+        subscription_id = stripe_dict.get('id')
+        status = stripe_dict.get('status')
+        
+        # 期間情報の取得（複数のフィールドを試行）
+        current_period_start = None
+        current_period_end = None
+        
+        # current_period_startの取得を試行
+        if 'current_period_start' in stripe_dict:
+            current_period_start = datetime.fromtimestamp(stripe_dict['current_period_start'])
+        elif 'created' in stripe_dict:
+            current_period_start = datetime.fromtimestamp(stripe_dict['created'])
+        
+        # current_period_endの取得を試行
+        if 'current_period_end' in stripe_dict:
+            current_period_end = datetime.fromtimestamp(stripe_dict['current_period_end'])
+        
+        # price_idの取得
+        price_id = None
+        if 'items' in stripe_dict and 'data' in stripe_dict['items']:
+            items_data = stripe_dict['items']['data']
+            if len(items_data) > 0 and 'price' in items_data[0]:
+                price_id = items_data[0]['price']['id']
+        
+        # Subscriptionレコードを作成または更新
+        subscription, created = Subscription.objects.update_or_create(
+            user=user,
+            stripe_subscription_id=subscription_id,
+            defaults={
+                'stripe_customer_id': user.stripe_customer_id,
+                'stripe_price_id': price_id,
+                'status': status,
+                'current_period_start': current_period_start,
+                'current_period_end': current_period_end,
+            }
+        )
+        
+        return subscription, created
+        
+    except Exception as e:
+        print(f"Sync error: {e}")
+        raise
+
+
 @login_required
 @require_POST
 def cancel_subscription(request):
@@ -484,33 +541,10 @@ def cancel_subscription(request):
                     if stripe_subscriptions.data:
                         # アクティブなサブスクリプションが見つかった場合、データベースに同期
                         stripe_sub = stripe_subscriptions.data[0]
-                        print(f"Syncing subscription: {stripe_sub['id']}")
+                        print(f"Syncing subscription: {stripe_sub.id}")
                         
-                        # 詳細デバッグ情報を追加
-                        print(f"DEBUG: stripe_sub type: {type(stripe_sub)}")
-                        print(f"DEBUG: stripe_sub dir: {[attr for attr in dir(stripe_sub) if not attr.startswith('_')]}")
-                        print(f"DEBUG: hasattr items: {hasattr(stripe_sub, 'items')}")
-                        print(f"DEBUG: hasattr current_period_start: {hasattr(stripe_sub, 'current_period_start')}")
-                        
-                        # 安全にアクセスしてみる
-                        try:
-                            print(f"DEBUG: stripe_sub.id: {stripe_sub.id}")
-                            print(f"DEBUG: stripe_sub.status: {stripe_sub.status}")
-                            print(f"DEBUG: stripe_sub.current_period_start: {stripe_sub.current_period_start}")
-                        except Exception as e:
-                            print(f"DEBUG: Error accessing attributes: {e}")
-                        
-                        subscription, created = Subscription.objects.update_or_create(
-                            user=user,
-                            stripe_subscription_id=stripe_sub['id'],
-                            defaults={
-                                'stripe_customer_id': user.stripe_customer_id,
-                                'stripe_price_id': stripe_sub['items']['data'][0]['price']['id'],
-                                'status': stripe_sub['status'],
-                                'current_period_start': datetime.fromtimestamp(stripe_sub['current_period_start']),
-                                'current_period_end': datetime.fromtimestamp(stripe_sub['current_period_end']),
-                            }
-                        )
+                        # 修正版の同期関数を使用
+                        subscription, created = sync_subscription_from_stripe(user, stripe_sub)
                         print(f"Subscription synced, created: {created}")
                     else:
                         print("ERROR: No active subscriptions in Stripe")
@@ -661,18 +695,8 @@ def handle_checkout_session_completed(session_data):
             subscription_id = session_data['subscription']
             subscription_data = stripe.Subscription.retrieve(subscription_id)
             
-            # Subscriptionレコードを作成
-            Subscription.objects.update_or_create(
-                user=user,
-                stripe_subscription_id=subscription_id,
-                defaults={
-                    'stripe_customer_id': customer_id,
-                    'stripe_price_id': subscription_data['items']['data'][0]['price']['id'],
-                    'status': subscription_data['status'],
-                    'current_period_start': datetime.fromtimestamp(subscription_data['current_period_start']),
-                    'current_period_end': datetime.fromtimestamp(subscription_data['current_period_end']),
-                }
-            )
+            # 修正版の同期関数を使用
+            sync_subscription_from_stripe(user, subscription_data)
         
     except Exception as e:
         # エラーログを出力
@@ -686,16 +710,8 @@ def handle_subscription_created(subscription_data):
         customer = stripe.Customer.retrieve(subscription_data['customer'])
         user = CustomUser.objects.get(stripe_customer_id=customer.id)
         
-        # サブスクリプションを作成
-        Subscription.objects.create(
-            user=user,
-            stripe_subscription_id=subscription_data['id'],
-            stripe_customer_id=customer.id,
-            stripe_price_id=subscription_data['items']['data'][0]['price']['id'],
-            status=subscription_data['status'],
-            current_period_start=datetime.fromtimestamp(subscription_data['current_period_start']),
-            current_period_end=datetime.fromtimestamp(subscription_data['current_period_end']),
-        )
+        # 修正版の同期関数を使用
+        sync_subscription_from_stripe(user, subscription_data)
         
     except:
         pass
@@ -707,10 +723,14 @@ def handle_subscription_updated(subscription_data):
             stripe_subscription_id=subscription_data['id']
         )
         
-        # ステータスと期間を更新
-        subscription.status = subscription_data['status']
-        subscription.current_period_start = datetime.fromtimestamp(subscription_data['current_period_start'])
-        subscription.current_period_end = datetime.fromtimestamp(subscription_data['current_period_end'])
+        # ステータスと期間を安全に更新
+        subscription.status = subscription_data.get('status')
+        
+        if 'current_period_start' in subscription_data:
+            subscription.current_period_start = datetime.fromtimestamp(subscription_data['current_period_start'])
+        if 'current_period_end' in subscription_data:
+            subscription.current_period_end = datetime.fromtimestamp(subscription_data['current_period_end'])
+        
         subscription.save()
         
     except:
@@ -762,16 +782,3 @@ def handle_payment_failed(invoice_data):
         
         # 失敗した決済履歴を作成
         PaymentHistory.objects.create(
-            user=subscription.user,
-            subscription=subscription,
-            stripe_payment_intent_id=invoice_data.get('payment_intent', ''),
-            stripe_invoice_id=invoice_data['id'],
-            amount=invoice_data['amount_due'] / 100,
-            currency=invoice_data['currency'],
-            status='failed',
-            description="プレミアム会員 月額料金（決済失敗）",
-            failure_reason='決済に失敗しました',
-        )
-        
-    except:
-        pass
