@@ -480,7 +480,7 @@ def sync_subscription_from_stripe(user, stripe_sub):
             if field in stripe_dict:
                 print(f"DEBUG: Found {field}: {stripe_dict[field]}")
         
-        # current_period_startの取得を試行（タイムゾーン対応）
+        # current_period_startの取得を試行
         if 'current_period_start' in stripe_dict and stripe_dict['current_period_start']:
             current_period_start = timezone.make_aware(datetime.fromtimestamp(stripe_dict['current_period_start']))
         elif 'created' in stripe_dict and stripe_dict['created']:
@@ -488,7 +488,7 @@ def sync_subscription_from_stripe(user, stripe_sub):
         elif 'start_date' in stripe_dict and stripe_dict['start_date']:
             current_period_start = timezone.make_aware(datetime.fromtimestamp(stripe_dict['start_date']))
         
-        # current_period_endの取得を試行（タイムゾーン対応）
+        # current_period_endの取得を試行
         if 'current_period_end' in stripe_dict and stripe_dict['current_period_end']:
             current_period_end = timezone.make_aware(datetime.fromtimestamp(stripe_dict['current_period_end']))
         elif 'trial_end' in stripe_dict and stripe_dict['trial_end']:
@@ -497,7 +497,7 @@ def sync_subscription_from_stripe(user, stripe_sub):
         print(f"DEBUG: current_period_start: {current_period_start}")
         print(f"DEBUG: current_period_end: {current_period_end}")
         
-        # current_period_endがNullの場合、デフォルト値を設定（タイムゾーン対応）
+        # current_period_endがNullの場合、デフォルト値を設定
         if not current_period_end and current_period_start:
             # 1ヶ月後をデフォルトとして設定
             current_period_end = current_period_start + timedelta(days=30)
@@ -613,7 +613,7 @@ def cancel_subscription(request):
                     'error': 'アクティブなサブスクリプションがありません'
                 }, status=400)
         
-        # Stripeでサブスクリプションをキャンセル（期間終了時にキャンセル）
+        # Stripeでサブスクリプションをキャンセル
         try:
             print(f"=== Modifying Stripe subscription: {subscription.stripe_subscription_id} ===")
             
@@ -627,7 +627,7 @@ def cancel_subscription(request):
             print(f"Cancel at period end: {updated_subscription.cancel_at_period_end}")
             
             # データベースのステータスも更新
-            subscription.status = 'active'  # cancel_at_period_endの場合はactiveのまま
+            subscription.status = 'active'
             subscription.save()
             print("=== Database status updated ===")
             
@@ -768,7 +768,7 @@ def handle_subscription_updated(subscription_data):
             stripe_subscription_id=subscription_data['id']
         )
         
-        # ステータスと期間を安全に更新（タイムゾーン対応）
+        # ステータスと期間を安全に更新
         subscription.status = subscription_data.get('status')
         
         if 'current_period_start' in subscription_data:
@@ -806,7 +806,7 @@ def handle_payment_succeeded(invoice_data):
             stripe_subscription_id=invoice_data['subscription']
         )
         
-        # 決済履歴を作成（タイムゾーン対応）
+        # 決済履歴を作成
         PaymentHistory.objects.create(
             user=subscription.user,
             subscription=subscription,
